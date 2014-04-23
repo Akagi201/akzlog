@@ -26,7 +26,6 @@ libtool
 libzlog.so*
 libzlog.a*
 ltmain.sh
-Makefile
 Makefile.in
 missing
 stamp-h1
