@@ -1,3 +1,14 @@
+
+/*
+ * @file test_default.c
+ *
+ * @author Akagi201
+ * @date 2014/04/23
+ *
+ * a more simple demo
+ *
+ */
+
 /*
  * This file is part of the zlog Library.
  *

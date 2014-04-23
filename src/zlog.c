@@ -113,6 +113,16 @@ err:
 }
 
 /*******************************************************************************/
+/*
+ * @brief zlog_init()从配置文件confpath中读取配置信息到内存
+ *
+ * 如果confpath为NULL, 会寻找环境变量ZLOG_CONF_PATH的值作为配置文件名.
+ * 如果环境变量ZLOG_CONF_PATH也没有, 所有日志以内置格式写到标准输出上.
+ * 每个进程只有第一次调用zlog_init()是有效的, 后面的多余调用都会失败并不做任何事情.
+ * @param[in] confpath: 配置文件路径
+ *
+ * @return 0: 成功 / -1: 失败. 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面
+ */
 int zlog_init(const char *confpath)
 {
 	int rc;
@@ -208,6 +218,16 @@ err:
 	return -1;
 }
 /*******************************************************************************/
+
+/*
+ * @brief 从confpath重载配置, 并根据这个配置文件来重计算内部的分类规则匹配, 重建每个线程的缓存, 并设置原有的用户自定义输出函数.
+ * 如果confpath为NULL, 会重载上一次zlog_init()或者zlog_reload()使用的配置文件.
+ * 如果zlog_reload()失败, 上一次的配置依然有效, 所以zlog_reload()具有原子性.
+ *
+ * @param[in] confpath: 配置文件路径
+ *
+ * @return 0: 成功 / -1: 失败. 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面
+ */
 int zlog_reload(const char *confpath)
 {
 	int rc = 0;
@@ -297,6 +317,12 @@ quit:
 	return 0;
 }
 /*******************************************************************************/
+/*
+ * @brief 清理所有zlog API申请的内存, 关闭它们打开的文件. 使用次数不限.
+ *
+ * @return 0: 成功 / -1: 失败
+ * 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面.
+ */
 void zlog_fini(void)
 {
 	int rc = 0;
@@ -326,6 +352,12 @@ exit:
 	return;
 }
 /*******************************************************************************/
+/*
+ * @brief 从zlog的全局分类表里面找到分类, 用于以后输出日志, 如果没有的话, 就建一个.
+ * 然后它会遍历所有的规则, 寻找和cname匹配的规则并绑定.
+ *
+ * @return 非NULL: zlog_category_t的指针 / NULL: 失败, 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面
+ */
 zlog_category_t *zlog_get_category(const char *cname)
 {
 	int rc = 0;
