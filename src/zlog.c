@@ -166,6 +166,17 @@ err:
 	return -1;
 }
 
+/*
+ * dzlog是忽略分类(zlog_category_t)的一组简单zlog接口. 他采用内置的一个默认分类, 这个分类置于锁的保护下.这些接口也是线程安全的.
+ * 忽略了分类, 意味着用户不需要操心创建, 存储, 传输zlog_category_t类型的变量.
+ * 当然也可以在用dzlog接口的同时用一般的zlog接口函数, 这样会更爽.
+ * dzlog_init()和zlog_init()一样做初始化, 就是多需要一个默认分类名cname的参数.
+ * zlog_reload(), zlog_fini() 可以和以前一样使用, 用来刷新配置, 或者清理.
+ *
+ * @return 0: 成功 / -1: 失败
+ * 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面.
+ */
+
 int dzlog_init(const char *confpath, const char *cname)
 {
 	int rc = 0;
@@ -403,6 +414,12 @@ err:
 	return NULL;
 }
 
+/*
+ * @brief 是用来改变默认分类用的. 上一个分类会被替换成新的. 同样不用担心内存释放的问题, zlog_fini()最后会清理.
+ *
+ * @return 0: 成功 / -1: 失败
+ * 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面.
+ */
 int dzlog_set_category(const char *cname)
 {
 	int rc = 0;
@@ -486,6 +503,17 @@ err:
 } while (0)
 
 /*******************************************************************************/
+// MDC操作
+// MDC(Mapped Diagnostic Context)是一个每线程拥有的键-值表, 所以和分类没什么关系.
+// key和value是字符串, 长度不能超过MAXLEN_PATH(1024). 如果超过MAXLEN_PATH(1024)的话, 会被截断.
+// 记住这个表是和线程绑定的, 每个线程有自己的表, 所以在一个线程内的调用不会影响其他线程.
+
+/*
+ * @brief 设置MDC
+ *
+ * @return 0: 成功 / -1: 失败
+ * 如果有错误发生, 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面.
+ */
 int zlog_put_mdc(const char *key, const char *value)
 {
 	int rc = 0;
@@ -527,6 +555,12 @@ err:
 	return -1;
 }
 
+/*
+ * @brief 获取MDC
+ *
+ * @return 非空: value的指针 / NULL: 失败或者没有相应的key
+ * 如果有错误发生, 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面.
+ */
 char *zlog_get_mdc(char *key)
 {
 	int rc = 0;
@@ -642,6 +676,12 @@ exit:
 }
 
 /*******************************************************************************/
+/*
+ * @brief 写日志函数, 输入的数据对应于配置文件中的%m, category来自于调用zlog_get_category()
+ * vzlog()根据format输出, 就像vprintf(3).
+ * vzlog()相当于zlog(), 只是它用一个va_list类型的参数args, 而不是一堆类型不同的参数.
+ * vzlog()内部使用了va_copy宏, args的内容在vzlog()后保持不变, 可以参考stdarg(3).
+ */
 void vzlog(zlog_category_t * category,
 	const char *file, size_t filelen,
 	const char *func, size_t funclen,
@@ -699,6 +739,20 @@ reload:
 	return;
 }
 
+/*
+ * @brief 写日志函数, 输入的数据对应于配置文件中的%m, category来自于调用zlog_get_category()
+ * hzlog()有点不一样, 它产生下面这样的输出, 长度为buf_len的内存buf以16进制的形式表示出来. h表示hex
+hex_buf_len=[5365]
+             0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F      0123456789ABCDEF
+
+0000000001   23 21 20 2f 62 69 6e 2f 62 61 73 68 0a 0a 23 20   #! /bin/bash..#
+
+0000000002   74 65 73 74 5f 68 65 78 20 2d 20 74 65 6d 70 6f   test_hex - tempo
+
+0000000003   72 61 72 79 20 77 72 61 70 70 65 72 20 73 63 72   rary wrapper scr
+ * 参数file和line填写为__FILE__和__LINE__这两个宏. 这两个宏标识日志是在哪里发生的.
+ * 参数func填写为__func__或者__FUNCTION__, 如果编译器支持的话, 如果不支持, 就填写为"<unkown>".
+ */
 void hzlog(zlog_category_t *category,
 	const char *file, size_t filelen,
 	const char *func, size_t funclen,
@@ -855,6 +909,10 @@ reload:
 }
 
 /*******************************************************************************/
+/*
+ * @brief 写日志函数, 输入的数据对应于配置文件中的%m, category来自于调用zlog_get_category()
+ * zlog()根据format输出, 就像printf(3)
+ */
 void zlog(zlog_category_t * category,
 	const char *file, size_t filelen, const char *func, size_t funclen,
 	long line, const int level,
@@ -961,6 +1019,16 @@ reload:
 }
 
 /*******************************************************************************/
+// 调试和诊断
+/*
+ * 环境变量ZLOG_PROFILE_ERROR指定zlog本身的错误日志.
+ * 环境变量ZLOG_PROFILE_DEBUG指定zlog本身的调试日志.
+ */
+/*
+ * @brief 打印所有内存中的配置信息到ZLOG_PROFILE_ERROR
+ *
+ * 在运行时, 可以把这个和配置文件比较, 看看有没有问题.
+ */
 void zlog_profile(void)
 {
 	int rc = 0;
@@ -988,6 +1056,12 @@ void zlog_profile(void)
 	return;
 }
 /*******************************************************************************/
+/*
+ * @brief 用户自定义输出, 绑定动作
+ *
+ * @return 0: 成功 / -1: 失败
+ * 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面.
+ */
 int zlog_set_record(const char *rname, zlog_record_fn record_output)
 {
 	int rc = 0;

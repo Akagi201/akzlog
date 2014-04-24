@@ -17,7 +17,7 @@
 int main(int argc, char** argv)
 {
 	int rc;
-	zlog_category_t *zc;
+	zlog_category_t *zc = NULL;
 
 	rc = zlog_init("test_mdc.conf");
 	if (rc) {

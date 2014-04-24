@@ -68,11 +68,20 @@ void hdzlog(const char *file, size_t filelen,
 	const char *func, size_t funclen,
 	long line, int level,
 	const void *buf, size_t buflen);
-
+/* 用户自定义输出
+ * zlog允许用户自定义输出函数. 输出函数需要绑定到某条特殊的规则上. 这种规则的例子是:
+ * *.*     $name, "record path %c %d"; simple
+ * zlog_set_record()做绑定动作. 规则中输出段有$name的, 会被用来做用户自定义输出.
+ * 输出函数为record. 这个函数需要为zlog_record_fn的格式.
+ * 所有zlog_set_record()做的绑定在zlog_reload()使用后继续有效.
+ */
+/*
+ * @brief zlog自定义输出信息
+ */
 typedef struct zlog_msg_s {
-	char *buf;
-	size_t len;
-	char *path;
+	char *buf; // zlog格式化后的日志信息
+	size_t len; // zlog格式化后的长度
+	char *path; // 来自规则的逗号后的字符串, 这个字符串会被动态的解析, 输出当前的path, 就像动态文件路径一样.
 } zlog_msg_t;
 
 typedef int (*zlog_record_fn)(zlog_msg_t *msg);
@@ -80,6 +89,9 @@ int zlog_set_record(const char *rname, zlog_record_fn record);
 
 /******* useful macros, can be redefined at user's h file **********/
 
+/*
+ * @brief 打印等级
+ */
 typedef enum {
 	ZLOG_LEVEL_DEBUG = 20,
 	ZLOG_LEVEL_INFO = 40,
@@ -87,7 +99,7 @@ typedef enum {
 	ZLOG_LEVEL_WARN = 80,
 	ZLOG_LEVEL_ERROR = 100,
 	ZLOG_LEVEL_FATAL = 120
-} zlog_level; 
+} zlog_level;
 
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
 # if defined __GNUC__ && __GNUC__ >= 2
@@ -99,6 +111,7 @@ typedef enum {
 
 #if defined __STDC_VERSION__ && __STDC_VERSION__ >= 199901L
 /* zlog macros */
+// 这些函数不返回. 如果有错误发生, 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面
 #define zlog_fatal(cat, ...) \
 	zlog(cat, __FILE__, sizeof(__FILE__)-1, __func__, sizeof(__func__)-1, __LINE__, \
 	ZLOG_LEVEL_FATAL, __VA_ARGS__)
