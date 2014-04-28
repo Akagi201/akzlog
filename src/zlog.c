@@ -331,7 +331,6 @@ quit:
 /*
  * @brief 清理所有zlog API申请的内存, 关闭它们打开的文件. 使用次数不限.
  *
- * @return 0: 成功 / -1: 失败
  * 详细错误会被写在由环境变量ZLOG_PROFILE_ERROR指定的错误日志里面.
  */
 void zlog_fini(void)
